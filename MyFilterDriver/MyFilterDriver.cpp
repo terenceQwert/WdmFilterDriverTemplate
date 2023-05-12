@@ -195,6 +195,17 @@ NTSTATUS HelloDDKCreate(IN PDEVICE_OBJECT pDevObj,
 	return ntStatus;
 }
 
+NTSTATUS
+FilterDriverIoCompletion(
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PVOID Context)
+{
+	if (Irp->PendingReturned == TRUE)
+		IoMarkIrpPending(Irp);
+	return STATUS_SUCCESS;
+}
+
 #pragma PAGEDCODE
 NTSTATUS HelloDDKRead(IN PDEVICE_OBJECT pDevObj,
 								 IN PIRP pIrp) 
@@ -204,11 +215,18 @@ NTSTATUS HelloDDKRead(IN PDEVICE_OBJECT pDevObj,
 	//�N�ۤv����IRP�A�令�ѩ��h�X�ʭt�d
 
 	PDEVICE_EXTENSION pdx = (PDEVICE_EXTENSION)pDevObj->DeviceExtension;
-
+#if 0
 	//�I�s���h�X��
-    IoSkipCurrentIrpStackLocation (pIrp);
-
-    ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
+  IoSkipCurrentIrpStackLocation (pIrp);
+#else
+	IoCopyCurrentIrpStackLocationToNext(pIrp);
+	PIO_STACK_LOCATION stack = IoGetNextIrpStackLocation(pIrp);
+	ULONG ulReadLength = stack->Parameters.Read.Length;
+	memset(pIrp->AssociatedIrp.SystemBuffer, 0x60, ulReadLength);
+	IoSetCompletionRoutine(pIrp, FilterDriverIoCompletion, NULL, TRUE, TRUE, TRUE);
+#endif
+	// calll to next-lower driver
+  ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
 
 	KdPrint(("MyFilterDriver:Leave Read\n"));
 

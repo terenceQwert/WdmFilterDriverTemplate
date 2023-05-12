@@ -34,7 +34,7 @@ extern "C" NTSTATUS DriverEntry(
 NTSTATUS AddDevice(IN PDRIVER_OBJECT DriverObject, IN PDEVICE_OBJECT PhysicalDeviceObject);
 NTSTATUS HelloWDMPnp(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
 NTSTATUS HelloWDMDispatch(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
-NTSTATUS HelloWDMRead(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
+NTSTATUS StandardDriverRead(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
 
 VOID DumpDeviceStack(IN PDEVICE_OBJECT pdo);
 VOID DisplayProcessName();
@@ -57,7 +57,7 @@ NTSTATUS DriverEntry(
   DriverObject->MajorFunction[IRP_MJ_CREATE] = HelloWDMDispatch;
   DriverObject->MajorFunction[IRP_MJ_READ] = HelloWDMDispatch;
   DriverObject->MajorFunction[IRP_MJ_WRITE] = HelloWDMDispatch;
-  DriverObject->MajorFunction[IRP_MJ_READ] = HelloWDMRead;
+  DriverObject->MajorFunction[IRP_MJ_READ] = StandardDriverRead;
   DriverObject->DriverUnload = HelloWDMUnload;
   KdPrint(("Leave MyStandardDriver:DriverEntry\n"));
   return STATUS_SUCCESS;
@@ -161,12 +161,39 @@ NTSTATUS HandleRemoveDevice(PDEVICE_EXTENSION pdx, PIRP pIrp)
 #pragma
 
 NTSTATUS
-HelloWDMRead(IN PDEVICE_OBJECT, IN PIRP irp)
+StandardDriverRead(IN PDEVICE_OBJECT, IN PIRP irp)
 {
   PAGED_CODE();
   KdPrint(("Enter Standard Driver: Enter Read\n"));
+  PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(irp);
+  KdPrint(("Standard Driver: buffer length = %d\n", stack->Parameters.Read.Length));
+
+  //
+  // only return 5 bytes
+  //
+  {
+    ULONG length = stack->Parameters.Read.Length;
+    unsigned char buf[5] = { 0x31,0x32,0x33,0x34,0x35 };
+    unsigned char * pchBuf = (unsigned char*)irp->AssociatedIrp.SystemBuffer;
+    memcpy((PVOID)&pchBuf[5], &buf, 5);
+  }
+  //
+  //
+  //
+
+  //
+  // make sure this irp working success
+  //
   irp->IoStatus.Status = STATUS_SUCCESS;
-  irp->IoStatus.Information = 0;  // no bytes transferred.
+
+  ///
+  /// returned length is same as providing buffer
+  ///
+  irp->IoStatus.Information = stack->Parameters.Read.Length;  // no bytes transferred.
+  
+  //
+  // this is the lowest level driver, we must call IoCompleteRequest routine to complete this irp traversal.
+  //
   IoCompleteRequest(irp, IO_NO_INCREMENT);
   KdPrint(("Enter Standard Driver: Exit  Read\n"));
   return STATUS_SUCCESS;

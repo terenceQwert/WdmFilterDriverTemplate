@@ -2,3 +2,11 @@
 MyFilterDriver/x64/
 MyStandardDriver/x64/
 x64/
+/Test/Release/ConsoleTest.tlog
+/Test/Release/vc142.pdb
+/Test/Release/main.obj
+/Test/Release/main.asm
+/Test/Release/ConsoleTest.vcxproj.FileListAbsolute.txt
+/Test/Release/ConsoleTest.pdb
+/Test/Release/ConsoleTest.log
+/Test/Release/ConsoleTest.exe.recipe
