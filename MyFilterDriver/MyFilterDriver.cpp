@@ -7,8 +7,7 @@
 #include "../common/Driver.h"
 #include "../common/common.h"
 
-
-
+NTSTATUS FilterAddDevice(IN PDRIVER_OBJECT DriverObject, IN PDEVICE_OBJECT PhysicalDeviceObject);
 /************************************************************************
 * �禡�W��:DriverEntry
 * �\��y�z:��l���X�ʵ{���A�w��M�ӽеw��귽�A�s�ؤ��֪���
@@ -22,19 +21,29 @@ extern "C" NTSTATUS DriverEntry (
 			IN PDRIVER_OBJECT pDriverObject,
 			IN PUNICODE_STRING ) 
 {
-	NTSTATUS ntStatus;
 	KdPrint(("MyFilterDriver:Enter DriverEntry\n"));
 
 	//�n����L�X�ʩI�s�禡�J�f
+	pDriverObject->DriverExtension->AddDevice = FilterAddDevice;
 	pDriverObject->DriverUnload = HelloDDKUnload;
 	pDriverObject->MajorFunction[IRP_MJ_CREATE] = HelloDDKCreate;
 	pDriverObject->MajorFunction[IRP_MJ_CLOSE] = HelloDDKClose;
 	pDriverObject->MajorFunction[IRP_MJ_WRITE] = HelloDDKDispatchRoutine;
 	pDriverObject->MajorFunction[IRP_MJ_READ] = FilterRead;
-	
+	KdPrint(("MyFilterDriver:Leave DriverEntry\n"));
+
+	return STATUS_SUCCESS;
+}
+
+#pragma PAGEDCODE
+NTSTATUS FilterAddDevice(IN PDRIVER_OBJECT DriverObject, IN PDEVICE_OBJECT PhysicalDeviceObject)
+{
+// 	PAGED_CODE();
+	NTSTATUS ntStatus = STATUS_SUCCESS;
 	UNICODE_STRING DeviceName;
 	RtlInitUnicodeString( &DeviceName, ATTACH_TO_DRIVER);
 
+	KdPrint(("MyFilterDriver:Enter FilterAddDevice\n"));
 	PDEVICE_OBJECT DeviceObject = NULL;
 	PFILE_OBJECT FileObject = NULL;
 	//�M��DriverA�s�ت��˸m����
@@ -47,7 +56,7 @@ extern "C" NTSTATUS DriverEntry (
 	}
 
 	//�s�ئۤv���X�ʸ˸m����
-	ntStatus = CreateDevice(pDriverObject);
+	ntStatus = CreateDevice(DriverObject);
 
 	if ( !NT_SUCCESS( ntStatus ) )
 	{
@@ -56,7 +65,7 @@ extern "C" NTSTATUS DriverEntry (
 		return ntStatus;
 	}
 
-	PDEVICE_EXTENSION pdx = (PDEVICE_EXTENSION) pDriverObject->DeviceObject->DeviceExtension;
+	PDEVICE_EXTENSION pdx = (PDEVICE_EXTENSION)DriverObject->DeviceObject->DeviceExtension;
 
 	PDEVICE_OBJECT FilterDeviceObject = pdx->pDevice;
 
@@ -83,8 +92,8 @@ extern "C" NTSTATUS DriverEntry (
 
 	KdPrint(("MyFilterDriver:attached on specific driver successfully!\n"));
 	
-	KdPrint(("MyFilterDriver:Leave DriverEntry\n"));
-	return ntStatus;
+	KdPrint(("MyFilterDriver:Leave FilterAddDevice\n"));
+	return STATUS_SUCCESS;
 }
 
 /************************************************************************
@@ -94,7 +103,8 @@ extern "C" NTSTATUS DriverEntry (
       pDriverObject:�qI/O�޲z�����Ƕi�Ӫ��X�ʪ���
 * ��^ ��:��^��l�ƪ��A
 *************************************************************************/
-#pragma INITCODE
+// #pragma INITCODE
+#pragma PAGEDCODE
 NTSTATUS CreateDevice (
 		IN PDRIVER_OBJECT	pDriverObject) 
 {
