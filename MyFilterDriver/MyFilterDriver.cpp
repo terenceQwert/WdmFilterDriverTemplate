@@ -30,7 +30,7 @@ extern "C" NTSTATUS DriverEntry (
 	pDriverObject->MajorFunction[IRP_MJ_CREATE] = HelloDDKCreate;
 	pDriverObject->MajorFunction[IRP_MJ_CLOSE] = HelloDDKClose;
 	pDriverObject->MajorFunction[IRP_MJ_WRITE] = HelloDDKDispatchRoutine;
-	pDriverObject->MajorFunction[IRP_MJ_READ] = HelloDDKRead;
+	pDriverObject->MajorFunction[IRP_MJ_READ] = FilterRead;
 	
 	UNICODE_STRING DeviceName;
 	RtlInitUnicodeString( &DeviceName, ATTACH_TO_DRIVER);
@@ -201,16 +201,18 @@ FilterDriverIoCompletion(
 	IN PIRP Irp,
 	IN PVOID Context)
 {
+	KdPrint(("MyFilterDRiver::FilterDriverIoComplete Routine\n"));
 	if (Irp->PendingReturned == TRUE)
 		IoMarkIrpPending(Irp);
 	return STATUS_SUCCESS;
 }
 
 #pragma PAGEDCODE
-NTSTATUS HelloDDKRead(IN PDEVICE_OBJECT pDevObj,
+NTSTATUS FilterRead(IN PDEVICE_OBJECT pDevObj,
 								 IN PIRP pIrp) 
 {
 	KdPrint(("MyFilterDriver:Enter Read\n"));
+	char* pchBuffer = "filter";
 	NTSTATUS ntStatus = STATUS_SUCCESS;
 	//�N�ۤv����IRP�A�令�ѩ��h�X�ʭt�d
 
@@ -218,18 +220,22 @@ NTSTATUS HelloDDKRead(IN PDEVICE_OBJECT pDevObj,
 #if 0
 	//�I�s���h�X��
   IoSkipCurrentIrpStackLocation (pIrp);
+	// calll to next-lower driver
+	ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
 #else
 	IoCopyCurrentIrpStackLocationToNext(pIrp);
 	PIO_STACK_LOCATION stack = IoGetNextIrpStackLocation(pIrp);
 	ULONG ulReadLength = stack->Parameters.Read.Length;
-	memset(pIrp->AssociatedIrp.SystemBuffer, 0x60, ulReadLength);
 	IoSetCompletionRoutine(pIrp, FilterDriverIoCompletion, NULL, TRUE, TRUE, TRUE);
-#endif
 	// calll to next-lower driver
-  ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
+	ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
+#endif
+	// modfiy data after IoCallDriver(...)
+	memcpy(pIrp->AssociatedIrp.SystemBuffer, pchBuffer, strlen(pchBuffer));
 
 	KdPrint(("MyFilterDriver:Leave Read\n"));
-
+	pIrp->IoStatus.Status = STATUS_SUCCESS;
+	pIrp->IoStatus.Information = 0x05;
 	return ntStatus;
 }
 
@@ -250,3 +256,5 @@ NTSTATUS HelloDDKClose(IN PDEVICE_OBJECT pDevObj,
 
 	return ntStatus;
 }
+
+

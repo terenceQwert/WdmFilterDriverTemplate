@@ -24,13 +24,14 @@ int main()
 	}
 
 	DWORD dRet=0;
-	UCHAR dwBuffer[10] = { 0 };
+	UCHAR dwBuffer[11] = { 0 };
 	ReadFile(hDevice,&dwBuffer,sizeof(dwBuffer),&dRet,NULL);
 	for (int i = 0; i < sizeof(dwBuffer) ; i++)
 	{
 		printf("0x%02x ", dwBuffer[i]);
 	}
 	printf("\n");
+	printf("%s\n", dwBuffer);
 	printf("final return length = %d\n", dRet);
 	CloseHandle(hDevice);
 

@@ -35,6 +35,7 @@ NTSTATUS AddDevice(IN PDRIVER_OBJECT DriverObject, IN PDEVICE_OBJECT PhysicalDev
 NTSTATUS HelloWDMPnp(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
 NTSTATUS HelloWDMDispatch(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
 NTSTATUS StandardDriverRead(IN PDEVICE_OBJECT fdo, IN PIRP pIrp);
+NTSTATUS StandardDriverWDMCLose( IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp);
 
 VOID DumpDeviceStack(IN PDEVICE_OBJECT pdo);
 VOID DisplayProcessName();
@@ -58,6 +59,7 @@ NTSTATUS DriverEntry(
   DriverObject->MajorFunction[IRP_MJ_READ] = HelloWDMDispatch;
   DriverObject->MajorFunction[IRP_MJ_WRITE] = HelloWDMDispatch;
   DriverObject->MajorFunction[IRP_MJ_READ] = StandardDriverRead;
+  DriverObject->MajorFunction[IRP_MJ_CLOSE] = StandardDriverWDMCLose;
   DriverObject->DriverUnload = HelloWDMUnload;
   KdPrint(("Leave MyStandardDriver:DriverEntry\n"));
   return STATUS_SUCCESS;
@@ -173,9 +175,10 @@ StandardDriverRead(IN PDEVICE_OBJECT, IN PIRP irp)
   //
   {
     ULONG length = stack->Parameters.Read.Length;
-    unsigned char buf[5] = { 0x31,0x32,0x33,0x34,0x35 };
+    char buf[5] = { 0x31,0x32,0x33,0x34,0x35 };
     unsigned char * pchBuf = (unsigned char*)irp->AssociatedIrp.SystemBuffer;
-    memcpy((PVOID)&pchBuf[5], &buf, 5);
+    memcpy((PVOID)&pchBuf[5], &buf, strlen(buf));
+    pchBuf[length-1] = 0;
   }
   //
   //
@@ -296,3 +299,25 @@ NTSTATUS HelloWDMPnp(IN PDEVICE_OBJECT fdo, IN PIRP Irp)
 }
 
 
+#pragma PAGEDCODE
+NTSTATUS StandardDriverWDMCLose(
+  IN PDEVICE_OBJECT pDevObj,
+  IN PIRP pIrp)
+{
+  KdPrint(("StandardDRiver:Enter Close\n"));
+  NTSTATUS ntStatus = STATUS_SUCCESS;
+#if 0
+  PDEVICE_EXTENSION pdx = (PDEVICE_EXTENSION)pDevObj->DeviceExtension;
+
+  IoSkipCurrentIrpStackLocation(pIrp);
+
+  ntStatus = IoCallDriver(pdx->TargetDevice, pIrp);
+#else
+  pIrp->IoStatus.Information = 0;
+  pIrp->IoStatus.Status = STATUS_SUCCESS;
+  IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+#endif
+  KdPrint(("StandardDRiver:Leave Close\n"));
+
+  return ntStatus;
+}

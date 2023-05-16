@@ -51,7 +51,7 @@ NTSTATUS HelloDDKCreate(IN PDEVICE_OBJECT pDevObj,
 								 IN PIRP pIrp);
 NTSTATUS HelloDDKClose(IN PDEVICE_OBJECT pDevObj,
 								 IN PIRP pIrp) ;
-NTSTATUS HelloDDKRead(IN PDEVICE_OBJECT pDevObj,
+NTSTATUS FilterRead(IN PDEVICE_OBJECT pDevObj,
 								 IN PIRP pIrp) ;
 
 
